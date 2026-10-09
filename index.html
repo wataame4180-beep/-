@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>キャラ設定ルーレット</title>
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#eceef6;--card:#fbfbff;--ink:#1c2040;--sub:#6a6f8f;--line:#cfd3e6;--accent:#3a3fd1;--accent-ink:#fff;--lock:#e0457b;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12142a;--card:#1c1f3d;--ink:#eceeff;--sub:#9ba0c6;--line:#34385f;--accent:#8c91ff;--accent-ink:#12142a;--lock:#ff7aa5;}}
+:root[data-theme="dark"]{--bg:#12142a;--card:#1c1f3d;--ink:#eceeff;--sub:#9ba0c6;--line:#34385f;--accent:#8c91ff;--accent-ink:#12142a;--lock:#ff7aa5;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;line-height:1.6}
+main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:.04em}
+.lead{margin:0 0 22px;color:var(--sub);font-size:.95rem}
+.row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px 14px;display:flex;flex-direction:column;align-items:stretch;gap:10px;transition:border-color .2s}
+.card .body{display:flex;flex-direction:column;justify-content:center;min-height:5.5em}
+.card.locked{border-color:var(--lock)}
+.card .body{flex:1;min-width:0}
+.card .name{font-size:.8rem;color:var(--sub);margin:0}
+.card .val{font-size:1.2rem;line-height:1.4;font-weight:700;margin:0;overflow-wrap:anywhere}
+.card.rolling .val{opacity:.45}
+button{font:inherit;cursor:pointer;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);padding:8px 12px;min-height:44px}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.card button{min-width:64px;font-size:.85rem}
+.lockbtn[aria-pressed="true"]{background:var(--lock);border-color:var(--lock);color:#fff}
+.seg{display:flex;gap:8px;margin-bottom:16px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.main{margin-top:20px;width:100%;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:1.1rem;font-weight:700;min-height:56px}
+.sub{margin-top:10px;display:flex;gap:10px}
+.sub button{flex:1}
+.note{margin-top:14px;color:var(--sub);font-size:.85rem;min-height:1.4em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>キャラ設定ルーレット</h1>
+  <p class="lead">服の系統・雰囲気・装飾・髪型をランダムで決めます。気に入った項目はロックして、残りだけ回せます。</p>
+  <div class="seg" role="group" aria-label="キャラの種類"><button type="button" data-mode="all" aria-pressed="true">完全ランダム</button><button type="button" data-mode="f" aria-pressed="false">女性キャラ用</button><button type="button" data-mode="m" aria-pressed="false">男性キャラ用</button></div>
+  <div class="row" id="cards"></div>
+  <button class="main" id="all" type="button">全部まわす</button>
+  <div class="sub">
+    <button id="copy" type="button">結果をコピー</button>
+    <button id="unlock" type="button">ロック解除</button>
+  </div>
+  <div class="note" id="note" role="status"></div>
+</main>
+<script>
+const DATA=[{"key": "系統・設定", "list": ["マフィア", "騎士", "魔法使い", "執事", "軍人", "海賊", "忍者", "巫女・神職", "探偵", "医者(白衣)", "学生(制服)", "貴族", "吸血鬼", "錬金術師", "旅人", "暗殺者", "神父・聖職者", "道化師・サーカス団員", "傭兵", "王族", "ストリート系", "和装の剣士", "研究者", "宇宙飛行士", "ギャンブラー", "バーテンダー", "従者・メイド", "宮廷楽師", "近衛兵", "司書", "画家・芸術家", "料理人", "整備士・技師", "警察官", "刑事", "スパイ", "海軍士官", "パイロット", "賞金稼ぎ", "盗賊・怪盗", "魔王・魔族", "天使", "悪魔", "死神", "獣人", "人形・自動人形", "陰陽師", "侍", "花魁・遊女", "舞踏家", "歌手・アイドル", "ロックバンド", "ヤンキー・不良", "生徒会長", "教師", "弁護士", "新聞記者", "商人", "行商人", "学者・賢者", "薬師", "占い師", "吟遊詩人", "狩人", "山賊", "農夫・牧童", "漁師", "サバイバー", "レジスタンス", "革命家", "執行人", "裁判官", "図書館の番人", "古書店の店主", "僧侶", "修道女", "ウエイター", "ホテルマン", "スーツのサラリーマン", "白衣の科学者", "サイバーパンク系", "スチームパンク系", "ゴスロリ系", "チャイナ服", "アラビアン風", "民族衣装風", "カジュアル私服", "ミリタリー", "ファー付きコート", "喪服"]},
+  {"key": "雰囲気", "list": ["気だるげ", "凛とした", "妖艶", "無邪気", "儚い", "威圧的", "飄々としている", "清潔感がある", "退廃的", "優雅", "野性的", "ミステリアス", "温厚", "狂気じみた", "古風", "近寄りがたい", "気さく", "冷静沈着", "危うい", "どこか寂しげ", "頼れる兄貴分", "お人好し", "皮肉屋", "生真面目", "ミステリアスな年上", "神経質", "おっとり", "ちゃらけた", "影がある", "品がある", "粗野", "冷酷", "穏やか", "眠そう", "堂々としている", "腹黒そう", "愛嬌がある", "幼い", "老成している", "中性的", "色気がある", "静かな圧がある", "胡散臭い", "健気", "気高い", "ぶっきらぼう", "寂れた", "やんちゃ", "憂いを帯びた", "不気味", "爽やか", "情熱的", "孤高", "おどおどした", "自信家", "どこか浮世離れしている", "人懐っこい", "疲れ切っている", "無表情", "柔らかい"]},
+  {"key": "装飾", "list": ["片眼鏡", "十字架のネックレス", "ピアス", "手袋", "懐中時計", "眼帯", "ブローチ", "腕章", "指輪を複数", "マント", "包帯", "鎖", "仮面", "ネクタイピン", "刺青", "髪飾り・リボン", "チョーカー", "角", "肩章", "顔の傷跡", "ベルトを多用", "羽根飾り", "鈴", "カフスボタン", "ストール", "丸眼鏡", "サングラス", "イヤーカフ", "ロザリオ", "ペンダント", "ブレスレット", "アンクレット", "ヘッドドレス", "帽子(ハット)", "ベレー帽", "フード付き", "マフラー", "スカーフ", "ネクタイ", "蝶ネクタイ", "ループタイ", "ガーター", "ホルスター", "短剣を携帯", "杖", "傘", "扇子", "煙管", "煙草", "香水の香り", "ランタン", "ピアスを多数", "口元のほくろ", "泣きぼくろ", "そばかす", "絆創膏", "タトゥーシール", "付け爪", "ヘアピン", "かんざし", "イヤリング", "金の刺繍", "宝石のあしらい", "毛皮の襟", "羽織", "肩掛け", "腰布", "足袋・草履", "ブーツ", "ヒール", "コルセット", "ケープ", "お守り", "数珠", "首にかけたゴーグル", "ヘッドホン", "腕時計", "ペンを胸ポケットに"]},
+  {"key": "髪型", "list": ["ロングストレート", "ウルフカット", "低めポニーテール", "三つ編み", "オールバック", "ショートボブ", "無造作ミディアム", "お団子", "ツインテール", "刈り上げ", "長髪ひとつ結び", "外ハネ", "センター分け", "片側だけ編み込み", "姫カット", "アシンメトリー", "ゆるパーマ", "坊主", "おさげ", "ハーフアップ", "ベリーショート", "マッシュ", "ツーブロック", "スパイラルパーマ", "ドレッドヘア", "ソフトモヒカン", "前髪ぱっつん", "長い前髪で片目が隠れる", "ゆるふわロング", "高めポニーテール", "サイドテール", "ゆるい三つ編み", "ツインお団子", "ボブ+内巻き", "ストレートミディアム", "ロングウェーブ", "巻き髪", "くせ毛", "寝ぐせ風", "ざんばら髪", "総髪(髷)", "ちょんまげ風", "編み込みアップ", "ねじりアップ", "後ろで低くまとめる", "片側だけ刈り上げ", "インナーカラー", "メッシュ入り", "グラデーションカラー", "白髪混じり", "ひとつ結び+ほつれ毛", "ショートウルフ", "ゆるいシニヨン"]}];
+const state=DATA.map(()=>({val:"—",locked:false}));
+const cardsEl=document.getElementById("cards"),note=document.getElementById("note");
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let mode="all";
+const ONLY={f:[["巫女・神職","従者・メイド","花魁・遊女","修道女","ゴスロリ系"],["健気"],["ヘッドドレス","かんざし","ガーター","ヒール","コルセット","付け爪","髪飾り・リボン"],["姫カット","ツインテール","お団子","ツインお団子","おさげ","サイドテール","ゆるふわロング","編み込みアップ","ねじりアップ","ゆるいシニヨン","前髪ぱっつん","ボブ+内巻き","ショートボブ"]],
+ m:[["執事","侍","山賊","神父・聖職者","ホテルマン"],["頼れる兄貴分","粗野"],[],["坊主","刈り上げ","ツーブロック","ソフトモヒカン","ドレッドヘア","片側だけ刈り上げ","総髪(髷)","ちょんまげ風","オールバック"]]};
+function pool(i){
+  const all=DATA[i].list;if(mode==="all")return all;
+  const other=ONLY[mode==="f"?"m":"f"][i];
+  return all.filter(v=>!other.includes(v));
+}
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+DATA.forEach((d,i)=>{
+  const c=document.createElement("div");c.className="card";c.id="c"+i;
+  c.innerHTML='<div class="body"><p class="name"></p><p class="val"></p></div>'+
+    '<button type="button" class="rollbtn">まわす</button>'+
+    '<button type="button" class="lockbtn" aria-pressed="false">ロック</button>';
+  c.querySelector(".name").textContent=d.key;
+  c.querySelector(".rollbtn").onclick=()=>roll(i);
+  c.querySelector(".lockbtn").onclick=()=>{state[i].locked=!state[i].locked;render(i)};
+  cardsEl.appendChild(c);render(i);
+});
+
+function render(i){
+  const c=document.getElementById("c"+i);
+  c.querySelector(".val").textContent=state[i].val;
+  c.classList.toggle("locked",state[i].locked);
+  c.querySelector(".lockbtn").setAttribute("aria-pressed",state[i].locked);
+}
+function roll(i){
+  if(state[i].locked)return;
+  const c=document.getElementById("c"+i),list=pool(i);
+  const finish=()=>{let v;do{v=pick(list)}while(v===state[i].val&&list.length>1);state[i].val=v;c.classList.remove("rolling");render(i)};
+  if(reduce){finish();return}
+  c.classList.add("rolling");
+  let n=0;const t=setInterval(()=>{c.querySelector(".val").textContent=pick(list);if(++n>=8){clearInterval(t);finish()}},60);
+}
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+  mode=b.dataset.mode;
+  document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  note.textContent="";state.forEach((_,i)=>roll(i));
+});
+document.getElementById("all").onclick=()=>{
+  if(state.every(s=>s.locked)){note.textContent="すべてロック中です。解除するとまわせます。";return}
+  note.textContent="";state.forEach((_,i)=>roll(i));
+};
+document.getElementById("unlock").onclick=()=>{state.forEach((s,i)=>{s.locked=false;render(i)});note.textContent="ロックを解除しました。"};
+document.getElementById("copy").onclick=async()=>{
+  const text=DATA.map((d,i)=>d.key+"：" +state[i].val).join("\n");
+  try{await navigator.clipboard.writeText(text);note.textContent="コピーしました。"}
+  catch(e){note.textContent="コピーできませんでした。手動で選択してください。"}
+};
+state.forEach((_,i)=>roll(i));
+</script>
+</body>
+</html>
